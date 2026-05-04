@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: transit_db
+    environment:
+      POSTGRES_DB: transit_db
+      POSTGRES_USER: transit_user
+      POSTGRES_PASSWORD: transit_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transit_user -d transit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: transit_backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://transit_user:transit_password@db:5432/transit_db?sslmode=disable
+      - PORT=8080
+
+volumes:
+  pgdata:

@@ -1,0 +1,392 @@
+{
+  "info": {
+    "_postman_id": "public-transit-mvp-v2",
+    "name": "Public Transit & Mobility API — v2.0",
+    "description": "Koleksi lengkap REST API untuk backend Public Transit MVP.\n\nBase URL default: http://localhost:8080\n\nUntuk mengubah base URL, edit variable `baseUrl` di Collection Variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "routeId",
+      "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "type": "string",
+      "description": "ID rute Koridor 1 dari seed data"
+    },
+    {
+      "key": "reportId",
+      "value": "",
+      "type": "string",
+      "description": "Diisi otomatis setelah POST /api/reports berhasil"
+    }
+  ],
+  "item": [
+    {
+      "name": "Routes",
+      "description": "Endpoint untuk data rute angkutan umum",
+      "item": [
+        {
+          "name": "GET All Active Routes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes"]
+            },
+            "description": "Mengambil semua rute yang aktif (is_active = true).\n\nResponse akan di-cache in-memory selama 5 menit."
+          },
+          "response": [
+            {
+              "name": "Success — Daftar Rute Aktif",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n      \"name\": \"Koridor 1 — Stasiun ke Alun-Alun\",\n      \"description\": \"Rute utama menghubungkan stasiun kereta dengan pusat kota.\",\n      \"color_hex\": \"#2E6DA4\",\n      \"polyline_data\": [{\"lat\": -6.9, \"lng\": 107.6}],\n      \"is_active\": true\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Route Detail by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/{{routeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "{{routeId}}"]
+            },
+            "description": "Mengambil detail satu rute berdasarkan UUID.\n\nResponse mencakup:\n- Data rute (name, color_hex, polyline_data)\n- Daftar schedules (jadwal operasional)\n- Daftar stops (halte) terurut by stop_order"
+          },
+          "response": [
+            {
+              "name": "Success — Detail Rute",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n    \"name\": \"Koridor 1 — Stasiun ke Alun-Alun\",\n    \"color_hex\": \"#2E6DA4\",\n    \"polyline_data\": [\n      {\"lat\": -6.9, \"lng\": 107.6},\n      {\"lat\": -6.91, \"lng\": 107.61}\n    ],\n    \"is_active\": true,\n    \"schedules\": [\n      {\n        \"id\": \"uuid\",\n        \"day_of_week\": [1,2,3,4,5],\n        \"start_time\": \"05:00:00\",\n        \"end_time\": \"22:00:00\",\n        \"interval_minutes\": 15\n      }\n    ],\n    \"stops\": [\n      {\n        \"id\": \"c3d4e5f6-a7b8-9012-cdef-012345678901\",\n        \"name\": \"Halte Stasiun\",\n        \"latitude\": -6.9,\n        \"longitude\": 107.6,\n        \"stop_order\": 1\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "Error — Route Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"NOT_FOUND\",\n    \"message\": \"Route not found\"\n  }\n}"
+            },
+            {
+              "name": "Error — Invalid UUID Format",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"INVALID_ID\",\n    \"message\": \"Invalid route ID format\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Stops by Route ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/{{routeId}}/stops",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes", "{{routeId}}", "stops"]
+            },
+            "description": "Mengambil daftar halte dalam suatu rute, diurutkan berdasarkan stop_order ASC.\n\nEndpoint baru di v2.0."
+          },
+          "response": [
+            {
+              "name": "Success — Daftar Halte",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"c3d4e5f6-a7b8-9012-cdef-012345678901\",\n      \"name\": \"Halte Stasiun\",\n      \"latitude\": -6.9,\n      \"longitude\": 107.6,\n      \"address\": \"Jl. Stasiun No. 1\",\n      \"stop_order\": 1\n    },\n    {\n      \"id\": \"d4e5f6a7-b8c9-0123-defa-123456789012\",\n      \"name\": \"Halte Balai Kota\",\n      \"latitude\": -6.915,\n      \"longitude\": 107.615,\n      \"address\": \"Jl. Asia Afrika No. 10\",\n      \"stop_order\": 2\n    },\n    {\n      \"id\": \"e5f6a7b8-c9d0-1234-efab-234567890123\",\n      \"name\": \"Halte Alun-Alun\",\n      \"latitude\": -6.93,\n      \"longitude\": 107.63,\n      \"address\": \"Alun-Alun Kota\",\n      \"stop_order\": 3\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "description": "Endpoint untuk sistem pelaporan insiden crowdsourcing",
+      "item": [
+        {
+          "name": "GET Active Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "active"]
+            },
+            "description": "Mengambil semua laporan yang berstatus ACTIVE dan belum kadaluarsa (expires_at > NOW()).\n\nFrontend sebaiknya polling endpoint ini setiap 60 detik."
+          },
+          "response": [
+            {
+              "name": "Success — Laporan Aktif",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"uuid-laporan\",\n      \"report_type\": \"TRAFFIC\",\n      \"latitude\": -6.2,\n      \"longitude\": 106.816666,\n      \"description\": \"Macet parah di perempatan\",\n      \"confirmed_count\": 3,\n      \"resolved_count\": 0,\n      \"status\": \"ACTIVE\",\n      \"expires_at\": \"2026-05-04T20:00:00Z\",\n      \"created_at\": \"2026-05-04T18:00:00Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Success — Tidak Ada Laporan Aktif",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Create Report — TRAFFIC",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Simpan reportId otomatis untuk digunakan di request Confirm",
+                  "if (pm.response.code === 201) {",
+                  "    // Tidak ada ID di response body saat ini, tapi bisa diambil dari GET active",
+                  "    console.log('Report created successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_type\": \"TRAFFIC\",\n  \"latitude\": -6.200000,\n  \"longitude\": 106.816666,\n  \"description\": \"Macet parah di perempatan Bundaran HI\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            },
+            "description": "Membuat laporan kemacetan baru.\n\n**report_type** yang valid: TRAFFIC | ACCIDENT | CLOSURE\n\n**Rate limiting:** Maksimal 5 laporan per jam per IP.\n\n**expires_at** diisi otomatis oleh backend (NOW + 2 jam)."
+          },
+          "response": [
+            {
+              "name": "Success — Report Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"message\": \"Report created successfully\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Create Report — ACCIDENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_type\": \"ACCIDENT\",\n  \"latitude\": -6.175392,\n  \"longitude\": 106.827153,\n  \"description\": \"Tabrakan truk dan motor di Jl. Sudirman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            },
+            "description": "Membuat laporan kecelakaan."
+          }
+        },
+        {
+          "name": "POST Create Report — CLOSURE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_type\": \"CLOSURE\",\n  \"latitude\": -6.211544,\n  \"longitude\": 106.845172,\n  \"description\": \"Jalan ditutup karena ada demo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            },
+            "description": "Membuat laporan penutupan jalan."
+          }
+        },
+        {
+          "name": "POST Create Report — Validation Error (type salah)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_type\": \"BANJIR\",\n  \"latitude\": -6.2,\n  \"longitude\": 106.8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            },
+            "description": "Test validasi — report_type BANJIR tidak valid. Harus TRAFFIC, ACCIDENT, atau CLOSURE.\n\nExpected response: 400 VALIDATION_ERROR"
+          },
+          "response": [
+            {
+              "name": "Error — Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"Key: 'CreateReportRequest.ReportType' Error:Field validation for 'ReportType' failed on the 'oneof' tag\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Confirm Report — STILL_ACTIVE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"STILL_ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}", "confirm"]
+            },
+            "description": "Konfirmasi bahwa laporan masih aktif.\n\nAction: **STILL_ACTIVE** → `confirmed_count += 1`\n\nGanti `{{reportId}}` dengan UUID laporan yang valid (ambil dari GET /api/reports/active)."
+          },
+          "response": [
+            {
+              "name": "Success — Confirmed",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"message\": \"Report confirmed successfully\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Confirm Report — RESOLVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"RESOLVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}", "confirm"]
+            },
+            "description": "Konfirmasi bahwa laporan sudah selesai.\n\nAction: **RESOLVED** → `resolved_count += 1`\n\nJika `resolved_count >= 3`, status laporan otomatis berubah menjadi RESOLVED."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Ping Server",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "routes"]
+            },
+            "description": "Quick check apakah server berjalan dan terhubung ke DB.\n\nJika berhasil (200 OK) → server UP dan DB terhubung.\nJika 500 → DB belum berjalan atau koneksi gagal."
+          }
+        }
+      ]
+    }
+  ]
+}
