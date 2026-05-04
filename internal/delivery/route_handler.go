@@ -22,6 +22,7 @@ func NewRouteHandler(router *gin.RouterGroup, ru domain.RouteUsecase) {
 	router.GET("/routes", handler.GetAllActiveRoutes)
 	router.GET("/routes/:id", handler.GetRouteDetails)
 	router.GET("/routes/:id/stops", handler.GetRouteStops)
+	router.GET("/routes/:id/journey", handler.GetJourney)
 }
 
 func (h *routeHandler) GetAllActiveRoutes(c *gin.Context) {
@@ -70,4 +71,24 @@ func (h *routeHandler) GetRouteStops(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.Success(stops))
+}
+
+func (h *routeHandler) GetJourney(c *gin.Context) {
+	fromLat := c.Query("from_lat")
+	fromLng := c.Query("from_lng")
+	toLat := c.Query("to_lat")
+	toLng := c.Query("to_lng")
+
+	if fromLat == "" || fromLng == "" || toLat == "" || toLng == "" {
+		c.JSON(http.StatusBadRequest, response.Error("MISSING_PARAMS", "from_lat, from_lng, to_lat, to_lng required"))
+		return
+	}
+
+	journey, err := h.routeUsecase.GetJourney(c.Request.Context(), fromLat, fromLng, toLat, toLng)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.Error("INTERNAL_ERROR", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Success(journey))
 }

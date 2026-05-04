@@ -33,7 +33,7 @@ func (r *reportRepository) Confirm(ctx context.Context, id uuid.UUID, isStillAct
 	if isStillActive {
 		return r.db.WithContext(ctx).Model(&domain.Report{}).Where("id = ?", id).UpdateColumn("confirmed_count", gorm.Expr("confirmed_count + 1")).Error
 	}
-	
+
 	// Increment resolved_count and update status if it reaches 3
 	query := `
 		UPDATE reports 

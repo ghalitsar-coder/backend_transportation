@@ -28,6 +28,7 @@ type Report struct {
 	ConfirmedCount int          `json:"confirmed_count" gorm:"not null;default:0"`
 	ResolvedCount  int          `json:"resolved_count" gorm:"not null;default:0"`
 	Status         ReportStatus `json:"status" gorm:"type:report_status_enum;not null;default:'ACTIVE'"`
+	Verified       bool         `json:"verified" gorm:"not null;default:false"`
 	ExpiresAt      time.Time    `json:"expires_at" gorm:"not null"`
 	CreatedAt      time.Time    `json:"created_at" gorm:"not null;default:now()"`
 }

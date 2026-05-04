@@ -42,12 +42,12 @@ type RouteStop struct {
 }
 
 type Schedule struct {
-	ID              uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	RouteID         uuid.UUID      `json:"route_id" gorm:"not null"`
-	DayOfWeek       pq.Int64Array  `json:"day_of_week" gorm:"type:integer[];not null;default:'{1,2,3,4,5}'"`
-	StartTime       string         `json:"start_time" gorm:"type:time;not null"`
-	EndTime         string         `json:"end_time" gorm:"type:time;not null"`
-	IntervalMinutes int            `json:"interval_minutes" gorm:"not null"`
+	ID              uuid.UUID     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	RouteID         uuid.UUID     `json:"route_id" gorm:"not null"`
+	DayOfWeek       pq.Int64Array `json:"day_of_week" gorm:"type:integer[];not null;default:'{1,2,3,4,5}'"`
+	StartTime       string        `json:"start_time" gorm:"type:time;not null"`
+	EndTime         string        `json:"end_time" gorm:"type:time;not null"`
+	IntervalMinutes int           `json:"interval_minutes" gorm:"not null"`
 }
 
 // RouteRepository defines methods for database interaction
@@ -63,4 +63,5 @@ type RouteUsecase interface {
 	GetAllActiveRoutes(ctx context.Context) ([]Route, error)
 	GetRouteDetails(ctx context.Context, id uuid.UUID) (*Route, error)
 	GetRouteStops(ctx context.Context, id uuid.UUID) ([]Stop, error)
+	GetJourney(ctx context.Context, fromLat, fromLng, toLat, toLng string) (interface{}, error)
 }

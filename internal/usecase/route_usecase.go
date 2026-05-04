@@ -2,7 +2,11 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -81,4 +85,37 @@ func (u *routeUsecase) GetRouteDetails(ctx context.Context, id uuid.UUID) (*doma
 
 func (u *routeUsecase) GetRouteStops(ctx context.Context, id uuid.UUID) ([]domain.Stop, error) {
 	return u.routeRepo.FindStopsByRouteID(ctx, id)
+}
+
+func (u *routeUsecase) GetJourney(ctx context.Context, fromLat, fromLng, toLat, toLng string) (interface{}, error) {
+	apiKey := os.Getenv("TOMTOM_API_KEY")
+	if apiKey == "" {
+		return nil, errors.New("TOMTOM_API_KEY not configured")
+	}
+
+	url := fmt.Sprintf("https://api.tomtom.com/routing/1/calculateRoute/%s,%s:%s,%s/json?key=%s",
+		fromLat, fromLng, toLat, toLng, apiKey)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TomTom API error: %d", resp.StatusCode)
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
