@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -54,6 +55,39 @@ func main() {
 
 	// Initialize WebSocket Server
 	wsServer := notification.NewWebSocketServer(vehicleRepo)
+
+	// Load GeoJSON polylines untuk simulator kendaraan.
+	// routes.geojson adalah output dari convert-csv-to-geojson.js yang
+	// disimpan di voyage-planner/public/. Backend membacanya satu kali saat startup
+	// dan menyimpannya ke in-memory cache.
+	exeDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	geojsonCandidates := []string{
+		// Relative dari working directory backend_transportation/
+		filepath.Join("..", "voyage-planner", "public", "routes.geojson"),
+		// Relative dari tmp/ (tempat air menyimpan binary)
+		filepath.Join(exeDir, "..", "..", "voyage-planner", "public", "routes.geojson"),
+		// Absolute path untuk development lokal
+		"/home/ghalytsar/Kuliah/CLOUD/EVALUASI_2/voyage-planner/public/routes.geojson",
+	}
+	// Prioritaskan env variable jika di-set
+	if envPath := os.Getenv("GEOJSON_ROUTES_PATH"); envPath != "" {
+		geojsonCandidates = append([]string{envPath}, geojsonCandidates...)
+	}
+
+	geojsonLoaded := false
+	for _, candidate := range geojsonCandidates {
+		absCandidate, _ := filepath.Abs(candidate)
+		logger.Info("Trying GeoJSON path: %s", absCandidate)
+		if err := wsServer.LoadGeoJSONRoutes(absCandidate); err == nil {
+			logger.Info("GeoJSON routes loaded from: %s", absCandidate)
+			geojsonLoaded = true
+			break
+		}
+	}
+	if !geojsonLoaded {
+		logger.Error("WARNING: routes.geojson tidak ditemukan. Set GEOJSON_ROUTES_PATH env var.")
+	}
+
 	go wsServer.RunSimulator(ctx)
 
 	// Initialize Gin Engine

@@ -89,8 +89,15 @@ func (u *routeUsecase) GetRouteStops(ctx context.Context, id uuid.UUID) ([]domai
 
 func (u *routeUsecase) GetJourney(ctx context.Context, fromLat, fromLng, toLat, toLng string) (interface{}, error) {
 	apiKey := os.Getenv("TOMTOM_API_KEY")
+
+	// Graceful fallback: jika API key belum dikonfigurasi, kembalikan respons kosong.
+	// Ini mencegah frontend crash saat fitur journey belum aktif.
 	if apiKey == "" {
-		return nil, errors.New("TOMTOM_API_KEY not configured")
+		logger.Info("TOMTOM_API_KEY not configured, returning empty journey response")
+		return map[string]interface{}{
+			"routes": []interface{}{},
+			"note":   "Fitur pencarian rute sedang tidak tersedia.",
+		}, nil
 	}
 
 	url := fmt.Sprintf("https://api.tomtom.com/routing/1/calculateRoute/%s,%s:%s,%s/json?key=%s",
@@ -98,13 +105,13 @@ func (u *routeUsecase) GetJourney(ctx context.Context, fromLat, fromLng, toLat, 
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gagal membuat request ke TomTom: %w", err)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gagal menghubungi TomTom API: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -114,8 +121,9 @@ func (u *routeUsecase) GetJourney(ctx context.Context, fromLat, fromLng, toLat, 
 
 	var result map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gagal memproses respons TomTom: %w", err)
 	}
 
 	return result, nil
 }
+

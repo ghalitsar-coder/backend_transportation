@@ -19,7 +19,12 @@ func NewRouteRepository(db *gorm.DB) domain.RouteRepository {
 
 func (r *routeRepository) FindAllActive(ctx context.Context) ([]domain.Route, error) {
 	var routes []domain.Route
-	if err := r.db.WithContext(ctx).Where("is_active = ?", true).Find(&routes).Error; err != nil {
+	// Preload("Schedules") memastikan data jadwal ikut di-fetch sekaligus (eager loading),
+	// sehingga endpoint GET /api/routes list sudah menyertakan schedules[] tanpa N+1 query.
+	if err := r.db.WithContext(ctx).
+		Where("is_active = ?", true).
+		Preload("Schedules").
+		Find(&routes).Error; err != nil {
 		return nil, err
 	}
 	return routes, nil
