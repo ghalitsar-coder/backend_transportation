@@ -34,8 +34,8 @@ type rateLimitEntry struct {
 
 var ipRateLimiter sync.Map
 
-func (u *reportUsecase) CreateReport(ctx context.Context, req *domain.CreateReportRequest, ipAddress string) error {
-	// Rate limiting logic (Max 5 reports per hour per IP)
+func (u *reportUsecase) CreateReport(ctx context.Context, input *domain.CreateReportInput, imageURL string, ipAddress string) error {
+	// Rate limiting: max 5 laporan per jam per IP
 	now := time.Now()
 	if val, ok := ipRateLimiter.Load(ipAddress); ok {
 		entry := val.(rateLimitEntry)
@@ -46,33 +46,45 @@ func (u *reportUsecase) CreateReport(ctx context.Context, req *domain.CreateRepo
 			entry.Count++
 			ipRateLimiter.Store(ipAddress, entry)
 		} else {
-			// Reset if expired
 			ipRateLimiter.Store(ipAddress, rateLimitEntry{Count: 1, ExpiresAt: now.Add(1 * time.Hour)})
 		}
 	} else {
 		ipRateLimiter.Store(ipAddress, rateLimitEntry{Count: 1, ExpiresAt: now.Add(1 * time.Hour)})
 	}
 
-	verified := false
 	verifyCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	verified, err := u.verifyTraffic(verifyCtx, req.ReportType, req.Latitude, req.Longitude)
+	verified, err := u.verifyTraffic(verifyCtx, input.ReportType, input.Latitude, input.Longitude)
 	if err != nil {
 		logger.Error("Traffic verification failed: %v", err)
-		verified = false // Fallback: set to false on API failure/timeout
+		verified = false
+	}
+
+	// Set reporter_type — default ke "guest" jika tidak diisi
+	reporterType := input.ReporterType
+	if reporterType != "guest" && reporterType != "user" {
+		reporterType = "guest"
+	}
+
+	// Simpan imageURL ke pointer jika ada
+	var imgURLPtr *string
+	if imageURL != "" {
+		imgURLPtr = &imageURL
 	}
 
 	report := &domain.Report{
-		ID:          uuid.New(),
-		ReportType:  req.ReportType,
-		Latitude:    req.Latitude,
-		Longitude:   req.Longitude,
-		Description: req.Description,
-		Status:      domain.Active,
-		ExpiresAt:   now.Add(2 * time.Hour), // Set by backend, not client
-		CreatedAt:   now,
-		Verified:    verified,
+		ID:           uuid.New(),
+		ReportType:   input.ReportType,
+		Latitude:     input.Latitude,
+		Longitude:    input.Longitude,
+		Description:  input.Description,
+		Status:       domain.Active,
+		ExpiresAt:    now.Add(2 * time.Hour),
+		CreatedAt:    now,
+		Verified:     verified,
+		ReporterType: reporterType,
+		ImageURL:     imgURLPtr,
 	}
 
 	return u.reportRepo.Create(ctx, report)

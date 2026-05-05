@@ -18,6 +18,7 @@ import (
 	"transit-app/internal/logger"
 	"transit-app/internal/notification"
 	"transit-app/internal/repository"
+	"transit-app/internal/storage"
 	"transit-app/internal/usecase"
 )
 
@@ -45,6 +46,13 @@ func main() {
 	// Initialize Usecases
 	routeUsecase := usecase.NewRouteUsecase(routeRepo)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
+
+	// Initialize Storage — simpan gambar insiden ke direktori lokal.
+	// URL yang dikembalikan akan di-serve oleh Gin Static() di bawah.
+	localStorage, err := storage.NewLocalStorage("./uploads/reports", "/uploads/reports")
+	if err != nil {
+		logger.Fatal("Gagal inisialisasi storage: %v", err)
+	}
 
 	// Context for background jobs
 	ctx, cancel := context.WithCancel(context.Background())
@@ -112,7 +120,11 @@ func main() {
 
 	// Register HTTP Handlers
 	delivery.NewRouteHandler(api, routeUsecase)
-	delivery.NewReportHandler(api, reportUsecase)
+	delivery.NewReportHandler(api, reportUsecase, localStorage)
+
+	// Serve file gambar yang di-upload oleh user
+	// URL: GET /uploads/reports/<filename.jpg>
+	router.Static("/uploads", "./uploads")
 
 	// Register WebSocket route
 	wsServer.RegisterRoutes(router)
