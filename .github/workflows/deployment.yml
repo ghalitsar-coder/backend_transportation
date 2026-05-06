@@ -55,9 +55,6 @@ jobs:
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           containerAppName: backend-container
           resourceGroup: rg-aca-sea
-          # PAKSA Kredensial di sini agar tidak perlu "retrieve" otomatis
-          acrUsername: ${{ secrets.ACR_USERNAME }}
-          acrPassword: ${{ secrets.ACR_PASSWORD }}
           targetPort: 8080
           environmentVariables: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
