@@ -54,6 +54,7 @@ func RunAutoMigrations(db *sql.DB) error {
 		}
 
 		if exists {
+			logger.Info("Migrasi %s sudah diaplikasikan sebelumnya, dilewati.", file)
 			continue // Sudah diaplikasikan, lewati
 		}
 

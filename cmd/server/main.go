@@ -15,6 +15,7 @@ import (
 
 	"transit-app/config"
 	"transit-app/internal/delivery"
+	"transit-app/internal/domain"
 	"transit-app/internal/logger"
 	"transit-app/internal/migration"
 	"transit-app/internal/notification"
@@ -40,8 +41,25 @@ func main() {
 	logger.Info("Successfully connected to PostgreSQL via GORM")
 
 	// Run Database Migrations Automatically
+	logger.Info("Starting auto-migration check...")
 	if err := migration.RunAutoMigrations(sqlDB); err != nil {
 		logger.Fatal("Failed to run database migrations: %v", err)
+	}
+
+	// GORM AutoMigrate Fallback (just to ensure tables exist if schema_migrations was out of sync)
+	logger.Info("Running GORM AutoMigrate as fallback...")
+	err = db.AutoMigrate(
+		&domain.Route{},
+		&domain.Stop{},
+		&domain.RouteStop{},
+		&domain.Schedule{},
+		&domain.Vehicle{},
+		&domain.Report{},
+	)
+	if err != nil {
+		logger.Error("GORM AutoMigrate failed: %v", err)
+	} else {
+		logger.Info("GORM AutoMigrate completed successfully")
 	}
 
 	// Initialize Repositories
