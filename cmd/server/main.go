@@ -57,7 +57,7 @@ func main() {
 		&domain.Report{},
 	)
 	if err != nil {
-		logger.Fatal("GORM AutoMigrate failed: %v", err)
+		logger.Error("GORM AutoMigrate failed: %v", err)
 	} else {
 		logger.Info("GORM AutoMigrate completed successfully")
 	}
@@ -153,6 +153,39 @@ func main() {
 			return
 		}
 		c.Next()
+	})
+
+	// Debug Endpoint for Database Migrations
+	router.GET("/debug/db", func(c *gin.Context) {
+		err1 := migration.RunAutoMigrations(sqlDB)
+		
+		err2 := db.AutoMigrate(
+			&domain.Route{},
+			&domain.Stop{},
+			&domain.RouteStop{},
+			&domain.Schedule{},
+			&domain.Vehicle{},
+			&domain.Report{},
+		)
+
+		var err1Msg, err2Msg string
+		if err1 != nil {
+			err1Msg = err1.Error()
+		} else {
+			err1Msg = "Success / Skipped"
+		}
+		
+		if err2 != nil {
+			err2Msg = err2.Error()
+		} else {
+			err2Msg = "Success"
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"1_AutoMigrations_SQL": err1Msg,
+			"2_GORM_AutoMigrate":   err2Msg,
+			"database_url_used":    cfg.DatabaseURL,
+		})
 	})
 
 	// Setup API group
