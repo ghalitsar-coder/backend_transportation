@@ -51,7 +51,9 @@ jobs:
         with:
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           containerAppName: backend-container
-          resourceGroup: rg-aca-sea
+          resourceGroup: rg-aca-sea# Tambahkan dua baris ini agar Azure tidak bingung mencari kredensial
+          acrUsername: ${{ secrets.ACR_USERNAME }}
+          acrPassword: ${{ secrets.ACR_PASSWORD }}
           targetPort: 8080
           environmentVariables: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
