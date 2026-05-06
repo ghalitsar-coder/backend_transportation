@@ -143,6 +143,11 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
+	// Healthcheck endpoint (Unconditional 200 OK for Azure Container Apps)
+	router.GET("/health", func(c *gin.Context) {
+		c.String(http.StatusOK, "OK")
+	})
+
 	// CORS Middleware — diperlukan agar Vite dev server (port 5173) bisa akses backend
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
