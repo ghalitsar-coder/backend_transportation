@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,49 +29,70 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
+	var dbInitErr error
+	var sqlDB *sql.DB
+
 	// Initialize Database
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
 	if err != nil {
-		logger.Fatal("Failed to connect to database: %v", err)
+		logger.Error("Failed to connect to database: %v", err)
+		dbInitErr = fmt.Errorf("gorm.Open: %w", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		logger.Fatal("Failed to get sql.DB from gorm: %v", err)
-	}
-	defer sqlDB.Close()
-	logger.Info("Successfully connected to PostgreSQL via GORM")
-
-	// Run Database Migrations Automatically
-	logger.Info("Starting auto-migration check...")
-	if err := migration.RunAutoMigrations(sqlDB); err != nil {
-		logger.Fatal("Failed to run database migrations: %v", err)
+	if dbInitErr == nil {
+		sqlDB, err = db.DB()
+		if err != nil {
+			logger.Error("Failed to get sql.DB from gorm: %v", err)
+			dbInitErr = fmt.Errorf("db.DB: %w", err)
+		} else {
+			defer sqlDB.Close()
+			logger.Info("Successfully connected to PostgreSQL via GORM")
+		}
 	}
 
-	// GORM AutoMigrate Fallback (just to ensure tables exist if schema_migrations was out of sync)
-	logger.Info("Running GORM AutoMigrate as fallback...")
-	err = db.AutoMigrate(
-		&domain.Route{},
-		&domain.Stop{},
-		&domain.RouteStop{},
-		&domain.Schedule{},
-		&domain.Vehicle{},
-		&domain.Report{},
-	)
-	if err != nil {
-		logger.Error("GORM AutoMigrate failed: %v", err)
-	} else {
-		logger.Info("GORM AutoMigrate completed successfully")
+	if dbInitErr == nil {
+		// Run Database Migrations Automatically
+		logger.Info("Starting auto-migration check...")
+		if err := migration.RunAutoMigrations(sqlDB); err != nil {
+			logger.Error("Failed to run database migrations: %v", err)
+			dbInitErr = fmt.Errorf("RunAutoMigrations: %w", err)
+		}
 	}
 
-	// Initialize Repositories
-	routeRepo := repository.NewRouteRepository(db)
-	reportRepo := repository.NewReportRepository(db)
-	vehicleRepo := repository.NewVehicleRepository(db)
+	if dbInitErr == nil {
+		// GORM AutoMigrate Fallback
+		logger.Info("Running GORM AutoMigrate as fallback...")
+		err = db.AutoMigrate(
+			&domain.Route{},
+			&domain.Stop{},
+			&domain.RouteStop{},
+			&domain.Schedule{},
+			&domain.Vehicle{},
+			&domain.Report{},
+		)
+		if err != nil {
+			logger.Error("GORM AutoMigrate failed: %v", err)
+			dbInitErr = fmt.Errorf("AutoMigrate: %w", err)
+		} else {
+			logger.Info("GORM AutoMigrate completed successfully")
+		}
+	}
 
-	// Initialize Usecases
-	routeUsecase := usecase.NewRouteUsecase(routeRepo)
-	reportUsecase := usecase.NewReportUsecase(reportRepo)
+	// Initialize Repositories (Only if DB connected)
+	var routeRepo domain.RouteRepository
+	var reportRepo domain.ReportRepository
+	var vehicleRepo domain.VehicleRepository
+	var routeUsecase domain.RouteUsecase
+	var reportUsecase domain.ReportUsecase
+
+	if dbInitErr == nil {
+		routeRepo = repository.NewRouteRepository(db)
+		reportRepo = repository.NewReportRepository(db)
+		vehicleRepo = repository.NewVehicleRepository(db)
+		
+		routeUsecase = usecase.NewRouteUsecase(routeRepo)
+		reportUsecase = usecase.NewReportUsecase(reportRepo)
+	}
 
 	// Initialize Storage — pilih Azure Blob Storage jika connection string tersedia,
 	// fallback ke LocalStorage untuk development lokal.
@@ -162,31 +185,37 @@ func main() {
 
 	// Debug Endpoint for Database Migrations
 	router.GET("/debug/db", func(c *gin.Context) {
-		err1 := migration.RunAutoMigrations(sqlDB)
-		
-		err2 := db.AutoMigrate(
-			&domain.Route{},
-			&domain.Stop{},
-			&domain.RouteStop{},
-			&domain.Schedule{},
-			&domain.Vehicle{},
-			&domain.Report{},
-		)
-
 		var err1Msg, err2Msg string
-		if err1 != nil {
-			err1Msg = err1.Error()
-		} else {
-			err1Msg = "Success / Skipped"
-		}
 		
-		if err2 != nil {
-			err2Msg = err2.Error()
+		if dbInitErr != nil {
+			err1Msg = fmt.Sprintf("INIT ERROR: %v", dbInitErr)
+			err2Msg = "Skipped due to init error"
 		} else {
-			err2Msg = "Success"
+			err1 := migration.RunAutoMigrations(sqlDB)
+			err2 := db.AutoMigrate(
+				&domain.Route{},
+				&domain.Stop{},
+				&domain.RouteStop{},
+				&domain.Schedule{},
+				&domain.Vehicle{},
+				&domain.Report{},
+			)
+
+			if err1 != nil {
+				err1Msg = err1.Error()
+			} else {
+				err1Msg = "Success / Skipped"
+			}
+			
+			if err2 != nil {
+				err2Msg = err2.Error()
+			} else {
+				err2Msg = "Success"
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{
+			"0_Init_Status":        dbInitErr == nil,
 			"1_AutoMigrations_SQL": err1Msg,
 			"2_GORM_AutoMigrate":   err2Msg,
 			"database_url_used":    cfg.DatabaseURL,
