@@ -36,14 +36,14 @@ type Stop struct {
 
 type RouteStop struct {
 	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	RouteID   uuid.UUID `json:"route_id" gorm:"not null"`
-	StopID    uuid.UUID `json:"stop_id" gorm:"not null"`
+	RouteID   uuid.UUID `json:"route_id" gorm:"type:uuid;not null"`
+	StopID    uuid.UUID `json:"stop_id" gorm:"type:uuid;not null"`
 	StopOrder int       `json:"stop_order" gorm:"not null"`
 }
 
 type Schedule struct {
 	ID              uuid.UUID     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	RouteID         uuid.UUID     `json:"route_id" gorm:"not null"`
+	RouteID         uuid.UUID     `json:"route_id" gorm:"type:uuid;not null"`
 	DayOfWeek       pq.Int64Array `json:"day_of_week" gorm:"type:integer[];not null;default:'{1,2,3,4,5}'"`
 	StartTime       string        `json:"start_time" gorm:"type:time;not null"`
 	EndTime         string        `json:"end_time" gorm:"type:time;not null"`

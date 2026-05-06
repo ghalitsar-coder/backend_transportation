@@ -19,17 +19,25 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ─────────────────────────────────────────────────────────────
 
 -- Jenis laporan insiden dari masyarakat
-CREATE TYPE report_type_enum AS ENUM (
-    'TRAFFIC',   -- Kemacetan
-    'ACCIDENT',  -- Kecelakaan
-    'CLOSURE'    -- Jalan ditutup / rusak
-);
+DO $$ BEGIN
+    CREATE TYPE report_type_enum AS ENUM (
+        'TRAFFIC',   -- Kemacetan
+        'ACCIDENT',  -- Kecelakaan
+        'CLOSURE'    -- Jalan ditutup / rusak
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Status laporan
-CREATE TYPE report_status_enum AS ENUM (
-    'ACTIVE',   -- Laporan masih relevan
-    'RESOLVED'  -- Laporan sudah selesai / kadaluarsa
-);
+DO $$ BEGIN
+    CREATE TYPE report_status_enum AS ENUM (
+        'ACTIVE',   -- Laporan masih relevan
+        'RESOLVED'  -- Laporan sudah selesai / kadaluarsa
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -279,79 +287,4 @@ COMMENT ON FUNCTION auto_resolve_expired_reports IS
 --  SEED DATA — Data awal untuk development & testing
 -- ─────────────────────────────────────────────────────────────
 
--- Seed: 2 Rute contoh
-INSERT INTO routes (id, name, description, color_hex, polyline_data) VALUES
-(
-    'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    'Koridor 1 — Stasiun ke Alun-Alun',
-    'Rute utama menghubungkan stasiun kereta dengan pusat kota.',
-    '#2E6DA4',
-    '[
-        {"lat": -6.9000, "lng": 107.6000},
-        {"lat": -6.9100, "lng": 107.6100},
-        {"lat": -6.9200, "lng": 107.6200},
-        {"lat": -6.9300, "lng": 107.6300}
-    ]'
-),
-(
-    'b2c3d4e5-f6a7-8901-bcde-f01234567891',
-    'Angkot Rute 05 — Terminal ke Pasar',
-    'Rute angkutan kota menghubungkan terminal dengan kawasan pasar.',
-    '#F0A500',
-    '[
-        {"lat": -6.9050, "lng": 107.6050},
-        {"lat": -6.9150, "lng": 107.6150},
-        {"lat": -6.9250, "lng": 107.6250}
-    ]'
-);
-
--- Seed: Jadwal untuk Koridor 1 (hari kerja dan akhir pekan)
-INSERT INTO schedules (route_id, day_of_week, start_time, end_time, interval_minutes) VALUES
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', '{1,2,3,4,5}', '05:00:00', '22:00:00', 15),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', '{0,6}',       '06:00:00', '20:00:00', 30);
-
--- Seed: Jadwal untuk Angkot Rute 05
-INSERT INTO schedules (route_id, day_of_week, start_time, end_time, interval_minutes) VALUES
-('b2c3d4e5-f6a7-8901-bcde-f01234567891', '{1,2,3,4,5,6}', '05:30:00', '21:00:00', 20);
-
--- Seed: 3 Halte contoh
-INSERT INTO stops (id, name, latitude, longitude, address) VALUES
-('c3d4e5f6-a7b8-9012-cdef-012345678901', 'Halte Stasiun',    -6.9000, 107.6000, 'Jl. Stasiun No. 1'),
-('d4e5f6a7-b8c9-0123-defa-123456789012', 'Halte Balai Kota', -6.9150, 107.6150, 'Jl. Asia Afrika No. 10'),
-('e5f6a7b8-c9d0-1234-efab-234567890123', 'Halte Alun-Alun',  -6.9300, 107.6300, 'Alun-Alun Kota');
-
--- Seed: Hubungkan Koridor 1 dengan halte (urutan: Stasiun → Balai Kota → Alun-Alun)
-INSERT INTO route_stops (route_id, stop_id, stop_order) VALUES
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'c3d4e5f6-a7b8-9012-cdef-012345678901', 1),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'd4e5f6a7-b8c9-0123-defa-123456789012', 2),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'e5f6a7b8-c9d0-1234-efab-234567890123', 3);
-
--- Seed: 2 Kendaraan contoh yang ditugaskan ke Koridor 1
-INSERT INTO vehicles (vehicle_code, route_id, type, capacity) VALUES
-('V-101', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'bus',    40),
-('V-102', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'bus',    40),
-('AK-05A', 'b2c3d4e5-f6a7-8901-bcde-f01234567891', 'angkot', 12);
-
-
--- ─────────────────────────────────────────────────────────────
---  USEFUL QUERIES (untuk referensi developer)
--- ─────────────────────────────────────────────────────────────
-
--- Q1: Ambil semua laporan aktif yang belum kadaluarsa
--- SELECT * FROM reports WHERE status = 'ACTIVE' AND expires_at > NOW();
-
--- Q2: Ambil halte dari rute tertentu, urutkan
--- SELECT s.* FROM stops s
--- JOIN route_stops rs ON rs.stop_id = s.id
--- WHERE rs.route_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
--- ORDER BY rs.stop_order;
-
--- Q3: Ambil detail rute dengan jadwal dan kendaraan
--- SELECT r.*, s.start_time, s.end_time, s.interval_minutes, v.vehicle_code
--- FROM routes r
--- LEFT JOIN schedules s ON s.route_id = r.id
--- LEFT JOIN vehicles  v ON v.route_id = r.id AND v.is_active = TRUE
--- WHERE r.id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-
--- Q4: Panggil fungsi auto-resolve (jalankan dari Golang setiap 30 menit)
--- SELECT auto_resolve_expired_reports();
+-- EOF

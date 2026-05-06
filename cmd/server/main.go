@@ -121,11 +121,16 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start Background Jobs
-	go reportUsecase.RunAutoResolve(ctx)
+	// Start Background Jobs if DB initialized successfully
+	if dbInitErr == nil {
+		go reportUsecase.RunAutoResolve(ctx)
+	}
 
 	// Initialize WebSocket Server
-	wsServer := notification.NewWebSocketServer(vehicleRepo)
+	var wsServer *notification.WebSocketServer
+	if dbInitErr == nil {
+		wsServer = notification.NewWebSocketServer(vehicleRepo)
+	}
 
 	// Load GeoJSON polylines untuk simulator kendaraan.
 	// routes.geojson adalah output dari convert-csv-to-geojson.js yang
@@ -145,21 +150,21 @@ func main() {
 		geojsonCandidates = append([]string{envPath}, geojsonCandidates...)
 	}
 
-	geojsonLoaded := false
-	for _, candidate := range geojsonCandidates {
-		absCandidate, _ := filepath.Abs(candidate)
-		logger.Info("Trying GeoJSON path: %s", absCandidate)
-		if err := wsServer.LoadGeoJSONRoutes(absCandidate); err == nil {
-			logger.Info("GeoJSON routes loaded from: %s", absCandidate)
-			geojsonLoaded = true
-			break
+	if wsServer != nil {
+		geojsonLoaded := false
+		for _, candidate := range geojsonCandidates {
+			absCandidate, _ := filepath.Abs(candidate)
+			logger.Info("Trying GeoJSON path: %s", absCandidate)
+			if err := wsServer.LoadGeoJSONRoutes(absCandidate); err == nil {
+				logger.Info("GeoJSON routes loaded from: %s", absCandidate)
+				geojsonLoaded = true
+				break
+			}
+		}
+		if !geojsonLoaded {
+			logger.Error("WARNING: routes.geojson tidak ditemukan. Set GEOJSON_ROUTES_PATH env var.")
 		}
 	}
-	if !geojsonLoaded {
-		logger.Error("WARNING: routes.geojson tidak ditemukan. Set GEOJSON_ROUTES_PATH env var.")
-	}
-
-	go wsServer.RunSimulator(ctx)
 
 	// Initialize Gin Engine
 	router := gin.New()
@@ -225,16 +230,28 @@ func main() {
 	// Setup API group
 	api := router.Group("/api")
 
-	// Register HTTP Handlers
-	delivery.NewRouteHandler(api, routeUsecase)
-	delivery.NewReportHandler(api, reportUsecase, storageProvider)
+	if dbInitErr == nil {
+		// Initialize HTTP Handlers
+		delivery.NewRouteHandler(api, routeUsecase)
+		delivery.NewReportHandler(api, reportUsecase, storageProvider)
+
+		// Register WebSocket route
+		wsServer.RegisterRoutes(router)
+
+		// Mulai simulator kendaraan di background (goroutine)
+		go wsServer.RunSimulator(ctx)
+	} else {
+		// Add a fallback endpoint to explain why API is down
+		api.Any("/*path", func(c *gin.Context) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "API is currently unavailable due to a database initialization error. Check /debug/db for details.",
+			})
+		})
+	}
 
 	// Serve file gambar yang di-upload oleh user
 	// URL: GET /uploads/reports/<filename.jpg>
 	router.Static("/uploads", "./uploads")
-
-	// Register WebSocket route
-	wsServer.RegisterRoutes(router)
 
 	// Setup HTTP Server
 	srv := &http.Server{
