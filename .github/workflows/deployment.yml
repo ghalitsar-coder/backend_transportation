@@ -52,6 +52,7 @@ jobs:
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           containerAppName: backend-container
           resourceGroup: rg-aca-sea
+          targetPort: 8080
           environmentVariables: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
