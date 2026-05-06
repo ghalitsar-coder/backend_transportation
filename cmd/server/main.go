@@ -57,7 +57,7 @@ func main() {
 		&domain.Report{},
 	)
 	if err != nil {
-		logger.Error("GORM AutoMigrate failed: %v", err)
+		logger.Fatal("GORM AutoMigrate failed: %v", err)
 	} else {
 		logger.Info("GORM AutoMigrate completed successfully")
 	}
