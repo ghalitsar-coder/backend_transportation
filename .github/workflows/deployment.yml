@@ -46,12 +46,13 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # 5. Deploy
+      # 5. Deploy
       - name: Deploy to Container App
         uses: azure/container-apps-deploy-action@v1
         with:
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           containerAppName: backend-container
-          resourceGroup: rg-aca-sea# Tambahkan dua baris ini agar Azure tidak bingung mencari kredensial
+          resourceGroup: rg-aca-sea
           acrUsername: ${{ secrets.ACR_USERNAME }}
           acrPassword: ${{ secrets.ACR_PASSWORD }}
           targetPort: 8080
