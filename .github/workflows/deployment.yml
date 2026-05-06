@@ -47,12 +47,15 @@ jobs:
 
       # 5. Deploy
       # 5. Deploy
+      # 5. Deploy
       - name: Deploy to Container App
         uses: azure/container-apps-deploy-action@v1
         with:
+          # Gunakan image yang sudah di-build oleh Buildx tadi
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           containerAppName: backend-container
           resourceGroup: rg-aca-sea
+          # PAKSA Kredensial di sini agar tidak perlu "retrieve" otomatis
           acrUsername: ${{ secrets.ACR_USERNAME }}
           acrPassword: ${{ secrets.ACR_PASSWORD }}
           targetPort: 8080
