@@ -16,6 +16,7 @@ import (
 	"transit-app/config"
 	"transit-app/internal/delivery"
 	"transit-app/internal/logger"
+	"transit-app/internal/migration"
 	"transit-app/internal/notification"
 	"transit-app/internal/repository"
 	"transit-app/internal/storage"
@@ -37,6 +38,11 @@ func main() {
 	}
 	defer sqlDB.Close()
 	logger.Info("Successfully connected to PostgreSQL via GORM")
+
+	// Run Database Migrations Automatically
+	if err := migration.RunAutoMigrations(sqlDB); err != nil {
+		logger.Fatal("Failed to run database migrations: %v", err)
+	}
 
 	// Initialize Repositories
 	routeRepo := repository.NewRouteRepository(db)

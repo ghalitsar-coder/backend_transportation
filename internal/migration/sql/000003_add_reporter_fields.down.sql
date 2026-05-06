@@ -1,0 +1,4 @@
+ALTER TABLE reports
+  DROP COLUMN IF EXISTS reporter_type,
+  DROP COLUMN IF EXISTS user_id,
+  DROP COLUMN IF EXISTS image_url;

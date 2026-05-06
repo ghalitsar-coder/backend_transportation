@@ -46,12 +46,12 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # 5. Deploy
-      # 5. Deploy
-      # 5. Deploy
       - name: Deploy to Container App
         uses: azure/container-apps-deploy-action@v1
         with:
-          # Gunakan image yang sudah di-build oleh Buildx tadi
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           containerAppName: backend-container
           resourceGroup: rg-aca-sea
