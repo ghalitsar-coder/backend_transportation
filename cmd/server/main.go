@@ -47,11 +47,27 @@ func main() {
 	routeUsecase := usecase.NewRouteUsecase(routeRepo)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
 
-	// Initialize Storage — simpan gambar insiden ke direktori lokal.
-	// URL yang dikembalikan akan di-serve oleh Gin Static() di bawah.
-	localStorage, err := storage.NewLocalStorage("./uploads/reports", "/uploads/reports")
-	if err != nil {
-		logger.Fatal("Gagal inisialisasi storage: %v", err)
+	// Initialize Storage — pilih Azure Blob Storage jika connection string tersedia,
+	// fallback ke LocalStorage untuk development lokal.
+	var storageProvider storage.StorageProvider
+	if cfg.AzureStorageConnectionString != "" {
+		logger.Info("Menggunakan Azure Blob Storage (container: %s)", cfg.AzureStorageContainerName)
+		azureStorage, err := storage.NewAzureBlobStorage(
+			cfg.AzureStorageConnectionString,
+			cfg.AzureStorageContainerName,
+			cfg.AzureStorageAccountName,
+		)
+		if err != nil {
+			logger.Fatal("Gagal inisialisasi Azure Blob Storage: %v", err)
+		}
+		storageProvider = azureStorage
+	} else {
+		logger.Info("AZURE_STORAGE_CONNECTION_STRING tidak di-set, menggunakan LocalStorage")
+		ls, err := storage.NewLocalStorage("./uploads/reports", "/uploads/reports")
+		if err != nil {
+			logger.Fatal("Gagal inisialisasi storage: %v", err)
+		}
+		storageProvider = ls
 	}
 
 	// Context for background jobs
@@ -120,7 +136,7 @@ func main() {
 
 	// Register HTTP Handlers
 	delivery.NewRouteHandler(api, routeUsecase)
-	delivery.NewReportHandler(api, reportUsecase, localStorage)
+	delivery.NewReportHandler(api, reportUsecase, storageProvider)
 
 	// Serve file gambar yang di-upload oleh user
 	// URL: GET /uploads/reports/<filename.jpg>
