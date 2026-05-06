@@ -56,10 +56,10 @@ jobs:
           containerAppName: backend-container
           resourceGroup: rg-aca-sea
           targetPort: 8080
-          environmentVariables: |
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-            AZURE_STORAGE_CONTAINER_NAME=blobacacontainer
-            AZURE_STORAGE_ACCOUNT_NAME=blobacaghal
-            TOMTOM_API_KEY=${{ secrets.TOMTOM_API_KEY }}
-            PORT=8080
+          environmentVariables: >-
+            DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+            AZURE_STORAGE_CONTAINER_NAME="blobacacontainer"
+            AZURE_STORAGE_ACCOUNT_NAME="blobacaghal"
+            TOMTOM_API_KEY="${{ secrets.TOMTOM_API_KEY }}"
+            PORT="8080"
