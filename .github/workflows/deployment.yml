@@ -30,7 +30,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:latest
+          tags: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
           # Cache layer untuk mempercepat build Go berikutnya
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -43,6 +43,11 @@ jobs:
       - name: Deploy to Container App
         uses: azure/container-apps-deploy-action@v1
         with:
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:latest
-          containerAppName: transport-container
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/backend-go:${{ github.sha }}
+          containerAppName: backend-container
           resourceGroup: rg-aca-sea
+          environmentVariables: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+            TOMTOM_API_KEY=${{ secrets.TOMTOM_API_KEY }}
+            PORT=8080
