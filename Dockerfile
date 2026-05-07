@@ -20,6 +20,10 @@ COPY --from=builder /app/main .
 # Buat direktori uploads (akan di-mount jika pakai volume)
 RUN mkdir -p ./uploads/reports
 
+# Copy GeoJSON routes
+COPY routes.geojson ./routes.geojson
+ENV GEOJSON_ROUTES_PATH=./routes.geojson
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
