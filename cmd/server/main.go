@@ -89,7 +89,7 @@ func main() {
 		routeRepo = repository.NewRouteRepository(db)
 		reportRepo = repository.NewReportRepository(db)
 		vehicleRepo = repository.NewVehicleRepository(db)
-		
+
 		routeUsecase = usecase.NewRouteUsecase(routeRepo)
 		reportUsecase = usecase.NewReportUsecase(reportRepo)
 	}
@@ -176,6 +176,8 @@ func main() {
 		c.String(http.StatusOK, "OK")
 	})
 
+	// trigger deployment
+
 	// CORS Middleware — diperlukan agar Vite dev server (port 5173) bisa akses backend
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
@@ -191,7 +193,7 @@ func main() {
 	// Debug Endpoint for Database Migrations
 	router.GET("/debug/db", func(c *gin.Context) {
 		var err1Msg, err2Msg string
-		
+
 		if dbInitErr != nil {
 			err1Msg = fmt.Sprintf("INIT ERROR: %v", dbInitErr)
 			err2Msg = "Skipped due to init error"
@@ -211,7 +213,7 @@ func main() {
 			} else {
 				err1Msg = "Success / Skipped"
 			}
-			
+
 			if err2 != nil {
 				err2Msg = err2.Error()
 			} else {
