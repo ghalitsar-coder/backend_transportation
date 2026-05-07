@@ -176,8 +176,6 @@ func main() {
 		c.String(http.StatusOK, "OK")
 	})
 
-	// trigger deployment
-
 	// CORS Middleware — diperlukan agar Vite dev server (port 5173) bisa akses backend
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
