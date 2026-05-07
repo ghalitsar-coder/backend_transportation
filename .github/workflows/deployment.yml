@@ -45,7 +45,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 5. Deploy
+      # 5. Deploy image (tanpa env vars, hindari parsing karakter khusus)
       - name: Deploy to Container App
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -56,10 +56,20 @@ jobs:
           containerAppName: backend-container
           resourceGroup: rg-aca-sea
           targetPort: 8080
-          environmentVariables: >-
-            DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
-            AZURE_STORAGE_CONTAINER_NAME="blobacacontainer"
-            AZURE_STORAGE_ACCOUNT_NAME="blobacaghal"
-            TOMTOM_API_KEY="${{ secrets.TOMTOM_API_KEY }}"
-            PORT="8080"
+
+      # 6. Set environment variables via Azure CLI
+      # Menggunakan az containerapp update agar nilai yang mengandung karakter
+      # khusus (=, ;, &) tidak terpotong saat parsing oleh action.
+      - name: Set environment variables
+        run: |
+          az containerapp update \
+            --name backend-container \
+            --resource-group rg-aca-sea \
+            --set-env-vars \
+              "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+              "AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              "AZURE_STORAGE_CONTAINER_NAME=blobacacontainer" \
+              "AZURE_STORAGE_ACCOUNT_NAME=blobacaghal" \
+              "TOMTOM_API_KEY=${{ secrets.TOMTOM_API_KEY }}" \
+              "PORT=8080" \
+              "GEOJSON_ROUTES_PATH=./routes.geojson"
