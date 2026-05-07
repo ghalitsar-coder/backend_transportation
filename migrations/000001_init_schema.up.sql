@@ -9,9 +9,11 @@
 
 -- ─────────────────────────────────────────────────────────────
 --  EXTENSIONS
---  - pgcrypto : gen_random_uuid() untuk UUID generation
+--  - gen_random_uuid() secara bawaan sudah didukung di PostgreSQL 13+
+--  sehingga pgcrypto tidak diperlukan (dan sering dibatasi di Azure).
 -- ─────────────────────────────────────────────────────────────
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 
 
 -- ─────────────────────────────────────────────────────────────
